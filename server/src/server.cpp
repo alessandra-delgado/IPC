@@ -8,15 +8,9 @@
 #include <csignal>
 
 #include "../include/server.hpp"
-using namespace std;
+#include "../../shared/include/msg_t.hpp"
 
-// structure for message queue -- global var
-// todo: switch to use the msg_t.hpp
-struct mesg_buffer
-{
-    long mesg_type;
-    char mesg_text[6];
-} message;
+using namespace std;
 
 void signal_handler(int signum)
 {
@@ -27,6 +21,7 @@ void signal_handler(int signum)
 
 void dispatcher(int msgid)
 {
+    msg_t message;
     signal(SIGINT, signal_handler);
     vector<int> waiting_players;
     int games = 2;
@@ -39,13 +34,13 @@ void dispatcher(int msgid)
         msgrcv(msgid, &message, sizeof(message), 1, 0);
 
         // Adicioanr novo cliente à lista de espera
-        waiting_players.push_back(stoi(message.mesg_text));
+        waiting_players.push_back(stoi(message.msg_text));
 
         // Connect log message
-        cout << "Cliente " << message.mesg_text << " conectado." << endl;
+        cout << "Cliente " << message.msg_text << " conectado." << endl;
 
         // Clear msg
-        snprintf(message.mesg_text, 6, "%s", "00000");
+        snprintf(message.msg_text, 6, "%s", "00000");
 
         // Para cada dois jogadores criar uma sessão
         while (waiting_players.size() >= 2)
@@ -60,14 +55,14 @@ void dispatcher(int msgid)
             waiting_players.pop_back();
 
             // Send game session
-            snprintf(message.mesg_text, 100, "%d", games);
+            snprintf(message.msg_text, 100, "%d", games);
 
-            // Envia PID ao jogador 1
-            message.mesg_type = player1;
+            // Envia game session id ao jogador 1
+            message.msg_type = player1;
             msgsnd(msgid, &message, sizeof(message), 0);
 
-            // Envia PID ao jogador 2
-            message.mesg_type = player2;
+            // Envia game session id ao jogador 2
+            message.msg_type = player2;
             msgsnd(msgid, &message, sizeof(message), 0);
 
             cout << "A iniciar o jogo dos clientes: " << player1 << " : " << player2 << " GAME: " << games << endl;
