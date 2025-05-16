@@ -15,8 +15,8 @@ public:
         0b001001001, // Right column
         0b010010010, // Middle column
         0b100100100, // Left column
-        0b001010100, // Diagonal Bottom L -> Top R
-        0b100010001  // Diagonal Top L -> Bottom R
+        0b001010100, // Diagonal: Bottom L -> Top R
+        0b100010001  // Diagonal: Top L -> Bottom R
     };
     int session_id;
     uint16_t board = 0b000000000;
