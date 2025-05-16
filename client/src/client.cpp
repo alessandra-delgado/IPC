@@ -29,15 +29,13 @@ int main()
     msgsnd(msgid, &message, sizeof(message), 0);
     cout << "Client connected " << client_pid << endl;
 
-    
     message.msg_type = client_pid;
 
     // Get game session PID
     msgrcv(msgid, &message, sizeof(message), client_pid, 0);
-    game_id = message.msg_text;
+    // todo: Game loop
 
-    // Game loop
-        cout << "GAME STARTED ID: " << game_id << endl;
+    cout << message.msg_text << endl;
         
 
     return 0;
