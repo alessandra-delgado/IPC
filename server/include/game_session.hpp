@@ -8,7 +8,6 @@
 class GameSession
 {
 public:
-    static inline int last_session = 0; // Sequential session IDs ... not needed?
     const uint16_t bit_masks[8] = {
         0b000000111, // Bottom row
         0b000111000, // Middle row
@@ -19,14 +18,15 @@ public:
         0b001010100, // Diagonal: Bottom L -> Top R
         0b100010001  // Diagonal: Top L -> Bottom R
     };
-    int session_id; // not needed?
+    char board_char[9] = {NONE, NONE, NONE,
+                          NONE, NONE, NONE,
+                          NONE, NONE, NONE};
     uint16_t board = 0b000000000;
     player p1 = {-1, 0b000000000, NONE};
     player p2 = {-1, 0b000000000, NONE};
     Turn turn = P1;
+    // ^ This Turn enum seems a little useless ngl, but ill keep it for now
 
-    bool game_start();
     bool check_for_win(uint16_t player_moves);
     bool validate_move(int position);
-    char *board_to_message();
 };

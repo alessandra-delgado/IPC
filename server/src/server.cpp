@@ -77,10 +77,11 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     GameSession game;
     game.p1.pid = p1;
     game.p2.pid = p2;
+    game.p1.mark = X;
+    game.p2.mark = O;
     game.session_id = sess_id;
 
     msg_t message;
-    message.sender_id = sess_id;
     message.session_id = sess_id;
 
     sprintf(message.msg_text, "In thread %d, with session id %d, players are %d and %d", sess_id, sess_id, p1, p2);
