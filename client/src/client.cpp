@@ -26,16 +26,26 @@ int main()
     // Envia PID
     snprintf(message.msg_text, 6, "%d", client_pid);
 
-    msgsnd(msgid, &message, sizeof(message), 0);
+    msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
     cout << "Client connected " << client_pid << endl;
 
     message.msg_type = client_pid;
 
     // Get game session PID
-    msgrcv(msgid, &message, sizeof(message), client_pid, 0);
-    // todo: Game loop
-
+    msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), client_pid, 0);
+    
     cout << message.msg_text << endl;
+    message.msg_type = message.session_id;
+    message.sender_id = (int) getpid();
+    // todo: Game loop
+    string txt;
+    while(true){ // im just testing if i can correnctly send messages between clients and session threads :)
+        cout << "Mensagem a enviar: ";
+        getline(cin, txt);
+
+        snprintf(message.msg_text, 1000, "%s", txt.c_str());
+        msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+    }
         
 
     return 0;

@@ -14,11 +14,12 @@
 
 using namespace std;
 
+bool stop_dispatcher = false;
 void signal_handler(int signum)
 {
     cout << "Interrupt signal received (" << signum << ")" << endl;
 
-    exit(signum);
+    stop_dispatcher = true;
 }
 
 void dispatcher(int msgid)
@@ -29,12 +30,12 @@ void dispatcher(int msgid)
     int session_id = 2;
     map<int, thread> game_sessions;
 
-    while (true)
+    while (!stop_dispatcher)
     {
         cout << "A ESPERAR CONEXÃO" << endl;
 
         // Recebe PID do cliente
-        msgrcv(msgid, &message, sizeof(message), 1, 0);
+        msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), 1, 0);
 
         // Adicioanr novo cliente à lista de espera
         waiting_players.push_back(stoi(message.msg_text));
@@ -46,7 +47,7 @@ void dispatcher(int msgid)
         snprintf(message.msg_text, 6, "%s", "00000");
 
         // Para cada dois jogadores criar uma sessão
-        while (waiting_players.size() >= 2)
+        while (waiting_players.size() >= 2 && !stop_dispatcher)
         {
             cout << "A INICIAR JOGO" << endl;
 
@@ -74,12 +75,12 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     game.p1.pid = p1;
     game.p2.pid = p2;
     game.session_id = sess_id;
-    
+
     msg_t message;
     message.sender_id = sess_id;
     message.session_id = sess_id;
 
-    sprintf(message.msg_text,"In thread %d, with session id %d, players are %d and %d", sess_id, sess_id, p1, p2);
+    sprintf(message.msg_text, "In thread %d, with session id %d, players are %d and %d", sess_id, sess_id, p1, p2);
 
     // send message to player 1
     message.msg_type = p1;
@@ -88,7 +89,14 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     // send message to player 2
     message.msg_type = p2;
     msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+    while (!stop_dispatcher)
+    {
+        msg_t peeked;
 
+        msgrcv(msgid, &peeked, sizeof(msg_t) - sizeof(long), sess_id, 0); // remove from the message queue
+
+        cout << "Message received from session " << peeked.session_id << ", sender " << peeked.sender_id << ": " << peeked.msg_text << endl;
+    }
 
     // todo: loop...Read client message...<
 }

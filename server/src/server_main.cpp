@@ -1,7 +1,9 @@
+#include <iostream>
 #include <sys/msg.h>
 #include <vector>
 #include <thread>
 
+using namespace std;
 #include "../include/server.hpp"
 
 int main()
@@ -25,7 +27,8 @@ int main()
     
     // to destroy the message queue
     msgctl(msgid, IPC_RMID, NULL);
-
+    cout << "destroyed the message queue. shutting server down." << endl;
+    
     return 0;
 }
     
