@@ -7,7 +7,7 @@
 class GameSession
 {
 public:
-    static inline int last_session = 0; // Sequential session IDs
+    static inline int last_session = 0; // Sequential session IDs ... not needed?
     const uint16_t bit_masks[8] = {
         0b000000111, // Bottom row
         0b000111000, // Middle row
@@ -15,10 +15,10 @@ public:
         0b001001001, // Right column
         0b010010010, // Middle column
         0b100100100, // Left column
-        0b001010100, // Diagonal Bottom L -> Top R
-        0b100010001  // Diagonal Top L -> Bottom R
+        0b001010100, // Diagonal: Bottom L -> Top R
+        0b100010001  // Diagonal: Top L -> Bottom R
     };
-    int session_id;
+    int session_id; // not needed?
     uint16_t board = 0b000000000;
     player p1 = {-1, 0b000000000, NONE};
     player p2 = {-1, 0b000000000, NONE};
