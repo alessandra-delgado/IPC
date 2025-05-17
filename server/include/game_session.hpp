@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "player.hpp"
 #include "mark.hpp"
+#include "turn.hpp"
 
 class GameSession
 {
@@ -22,7 +23,7 @@ public:
     uint16_t board = 0b000000000;
     player p1 = {-1, 0b000000000, NONE};
     player p2 = {-1, 0b000000000, NONE};
-    int turn;
+    Turn turn = P1;
 
     bool game_start();
     bool check_for_win(uint16_t player_moves);
