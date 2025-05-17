@@ -79,7 +79,6 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     game.p2.pid = p2;
     game.p1.mark = X;
     game.p2.mark = O;
-    game.session_id = sess_id;
 
     msg_t message;
     message.session_id = sess_id;
