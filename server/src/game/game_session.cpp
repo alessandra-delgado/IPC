@@ -10,7 +10,12 @@ bool GameSession::check_for_win(uint16_t player_moves)
     return false;
 }
 
-// Validates move and adds it to the current player's move
+bool GameSession::check_for_draw()
+{
+    return this->board == 0b111111111;
+}
+
+// Validates move and adds it to the current player's move. Returns false if it's not an valid move, true if otherwise.
 bool GameSession::validate_move(int position)
 {
 
@@ -21,8 +26,8 @@ bool GameSession::validate_move(int position)
     {
         p->moves |= mask;
         this->board |= mask;
-        this->board_char[position-1] = p->mark;
-        return true;
+        this->board_char[position - 1] = p->mark;
+        return false; // valid move
     }
-    return false;
+    return true; // non-valid move
 }
