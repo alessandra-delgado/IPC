@@ -101,13 +101,13 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         // * 0 - check for win on previous turn -- things are initialized so this should be fine
         if (game.check_for_win(game.turn == P1 ? game.p2.moves : game.p1.moves))
         {
-            sprintf(message.msg_text, protocol_to_str(Protocol::MSG_WIN));
+            sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_WIN));
             broadcast(msgid, message, p1, p2);
             return;
         }
         else if (game.check_for_draw())
         {
-            sprintf(message.msg_text, protocol_to_str(Protocol::MSG_DRAW));
+            sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_DRAW));
             broadcast(msgid, message, p1, p2);
             return;
         }
@@ -119,17 +119,17 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         // * 2 - Send message to both clients
         // Send to the player that waits this turn
         message.msg_type = to_wait;
-        sprintf(message.msg_text, protocol_to_str(Protocol::MSG_WAIT));
+        sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_WAIT));
         msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
 
         // Send to the player that plays this turn
         message.msg_type = this_turn; // Update message receiver
-        sprintf(message.msg_text, protocol_to_str(Protocol::MSG_MOVE));
+        sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_MOVE));
         msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
 
         // * 3 - Communicate with this turn's player
         bool invalid_move = true;
-        sprintf(message.msg_text, protocol_to_str(Protocol::MSG_INVALID)); // Default
+        sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_INVALID)); // Default
         do
         {
             // - Wait for player's move
@@ -163,7 +163,7 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         game.turn = game.turn == P1 ? P2 : P1;
 
         // * 5 - Send message to both clients with the game status at the end of turn
-        sprintf(message.msg_text, "%s%s", protocol_to_str(Protocol::MSG_BOARD), game.board_char);
+        sprintf(message.msg_text, "%s\n%s\n", protocol_to_str(Protocol::MSG_BOARD), game.board_char);
         // Broadcast game board to players
         broadcast(msgid, message, p1, p2);
 
