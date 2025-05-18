@@ -2,6 +2,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <iostream>
+#include <string.h>
 #include <string>
 #include <vector>
 #include <thread>
@@ -11,6 +12,7 @@
 #include "../include/server.hpp"
 #include "../include/game_session.hpp"
 #include "../../shared/include/msg_t.hpp"
+#include "../include/protocol.hpp"
 
 using namespace std;
 
@@ -22,6 +24,17 @@ void signal_handler(int signum)
     stop_dispatcher = true;
 }
 
+void broadcast(int msgid, msg_t msg, long p1, long p2)
+{
+    // send message to player 1
+    msg.msg_type = p1;
+    msgsnd(msgid, &msg, sizeof(msg_t) - sizeof(long), 0);
+
+    // send message to player 2
+    msg.msg_type = p2;
+    msgsnd(msgid, &msg, sizeof(msg_t) - sizeof(long), 0);
+}
+
 void dispatcher(int msgid)
 {
     msg_t message;
@@ -30,6 +43,7 @@ void dispatcher(int msgid)
     int session_id = 2;
     map<int, thread> game_sessions;
 
+    // todo: send message for server shut down instead of using stop_dispatcher var, since msgrcv is blocking
     while (!stop_dispatcher)
     {
         cout << "A ESPERAR CONEXÃO" << endl;
@@ -72,31 +86,86 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
 {
     // 1 - Init the game in this thread
     GameSession game;
-    game.p1.pid = p1;
-    game.p2.pid = p2;
-    game.session_id = sess_id;
+    game.p1.pid = p1; game.p1.mark = X;
+    game.p2.pid = p2; game.p2.mark = O;
 
     msg_t message;
-    message.sender_id = sess_id;
     message.session_id = sess_id;
 
-    sprintf(message.msg_text, "In thread %d, with session id %d, players are %d and %d", sess_id, sess_id, p1, p2);
-
-    // send message to player 1
-    message.msg_type = p1;
-    msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
-
-    // send message to player 2
-    message.msg_type = p2;
-    msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
-    while (!stop_dispatcher)
+    sprintf(message.msg_text, "In session %d, players are %d and %d", sess_id, p1, p2);
+    
+    // Game loop ----------------------------------------------------------------------------
+    long this_turn, to_wait; // will be the main alternating msg_type
+    do
     {
-        msg_t peeked;
+        // * 0 - check for win on previous turn -- things are initialized so this should be fine
+        if (game.check_for_win(game.turn == P1 ? game.p2.moves : game.p1.moves))
+        {
+            sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_WIN));
+            broadcast(msgid, message, p1, p2);
+            return;
+        }
+        else if (game.check_for_draw())
+        {
+            sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_DRAW));
+            broadcast(msgid, message, p1, p2);
+            return;
+        }
 
-        msgrcv(msgid, &peeked, sizeof(msg_t) - sizeof(long), sess_id, 0); // remove from the message queue
+        // * 1 - Check whose turn it is
+        this_turn = game.turn == P1 ? p1 : p2;
+        to_wait = game.turn == P1 ? p2 : p1;
 
-        cout << "Message received from session " << peeked.session_id << ", sender " << peeked.sender_id << ": " << peeked.msg_text << endl;
-    }
+        // * 2 - Send message to both clients
+        // Send to the player that waits this turn
+        message.msg_type = to_wait;
+        sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_WAIT));
+        msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
 
-    // todo: loop...Read client message...<
+        // Send to the player that plays this turn
+        message.msg_type = this_turn; // Update message receiver
+        sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_MOVE));
+        msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+
+        // * 3 - Communicate with this turn's player
+        bool invalid_move = true;
+        sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_INVALID)); // Default
+        do
+        {
+            // - Wait for player's move
+            msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), sess_id, 0);
+
+            // - Parse the text from the message
+            int position;
+            char buf[1000];
+            strncpy(buf, message.msg_text, sizeof(buf));
+            char *line = strtok(buf, "\n");
+
+            if (line == NULL) // retry
+                msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+
+            // Read the next line
+            line = strtok(NULL, "\n");
+            // -- Convert the line to integer, if it fails tell client to retry
+            try
+            {
+                position = stoi(message.msg_text);
+                invalid_move = game.validate_move(position);
+            }
+            catch (exception)
+            {
+                msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0); // retry
+            };
+
+        } while (invalid_move);
+
+        // * 4 - Switch turns
+        game.turn = game.turn == P1 ? P2 : P1;
+
+        // * 5 - Send message to both clients with the game status at the end of turn
+        sprintf(message.msg_text, "%s\n%s\n", protocol_to_str(Protocol::MSG_BOARD), game.board_char);
+        // Broadcast game board to players
+        broadcast(msgid, message, p1, p2);
+
+    } while (true);
 }
