@@ -1,4 +1,5 @@
 #pragma once
+#include "../../shared/include/msg_t.hpp"
 
 void signal_handler(int signum);
 void broadcast(int msgid, msg_t *msg, long p1, long p2);
