@@ -1,4 +1,5 @@
 #pragma once
+#include "../../shared/include/msg_t.hpp"
 
 #include <stdint.h>
 #include "player.hpp"
@@ -28,6 +29,6 @@ public:
     // ^ This Turn enum seems a little useless ngl, but ill keep it for now
 
     bool check_for_win(uint16_t player_moves);
-    bool GameSession::check_for_draw();
+    bool check_for_draw();
     bool validate_move(int position);
 };
