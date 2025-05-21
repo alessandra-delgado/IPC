@@ -1,7 +1,7 @@
 #pragma once
 
 enum Mark{
-    NONE = '\0',
+    NONE = ' ',
     X = 'X',
     O = 'O'
 };

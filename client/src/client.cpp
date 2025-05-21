@@ -76,7 +76,8 @@ int main()
 
         } else if (msg_text.find(protocol_to_str(Protocol::MSG_BOARD)) != string::npos) {
             char* board = strchr(message.msg_text, '\n');
-            if (board) cout << "Board:\n" << board + 1 << endl;
+            if (board) cout << "Board:\n" << board << endl;
+
         } else if (msg_text.find(protocol_to_str(Protocol::MSG_WAIT)) != string::npos) {
             cout << "Waiting for the other player..." << endl;
         } else if (msg_text.find(protocol_to_str(Protocol::MSG_WIN)) != string::npos) {
