@@ -2,6 +2,7 @@
 #include <sys/msg.h>
 #include <iostream>
 #include <limits>
+#include <algorithm>
 #include <cstring>
 #include <sys/ipc.h>
 #include <unistd.h>
@@ -76,7 +77,30 @@ int main()
 
         } else if (msg_text.find(protocol_to_str(Protocol::MSG_BOARD)) != string::npos) {
             char* board = strchr(message.msg_text, '\n');
-            if (board) cout << "Board:\n" << board << endl;
+            if(board){
+                board ++; // jump '\n'
+                std::string display = board;
+                display.erase(std::remove(display.begin(), display.end(), '\n'), display.end());
+                display.resize(9, ' ');
+
+
+                cout << "\nBOARD:\n";
+                for(int j = 0; j < 3; j++){
+                    cout << " ";
+                    for (int i = 0 ; i < 3 ; i++){
+                        int pos = j * 3 + i;
+                        char c = display[pos];
+                        cout << c;
+                        if (i < 2)
+                            cout << " | ";
+                    }
+                    cout << "\n";
+                    if (j < 2 )
+                        cout << "---+---+---\n";
+                }
+                cout << endl;
+
+            }
 
         } else if (msg_text.find(protocol_to_str(Protocol::MSG_WAIT)) != string::npos) {
             cout << "Waiting for the other player..." << endl;
