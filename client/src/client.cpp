@@ -116,31 +116,36 @@ int main()
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_WIN)) != string::npos)
         {
-            cout << "\nGame over! " << "You win!" << endl;
+            cout << "Game over!" << "You win!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_LOSE)) != string::npos)
         {
-            cout << "\nGame over! " << "You lose." << endl;
+            cout << "Game over!" << "You lose." << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_DRAW)) != string::npos)
         {
-            cout << "\nGame over! It's a draw!" << endl;
+            cout << "Game over! It's a draw!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_INVALID)) != string::npos)
         {
-            cout << "\nInvalid move! Please try again!" << endl;
+            cout << "Invalid move! Please try again!" << endl;
         }
 
+        if (msg_text.find(protocol_to_str(Protocol::MSG_SHUTDOWN)) != string::npos)
+        {
+            cout << "Server shutdown. Thanks for playing!" << endl;
+
+        }
         if (msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), client_pid, 0) == -1)
         {
             perror("msgrcv failed --- loop");
             return 1;
         }
     }
-    cout << "Game ended. Press enter to exit ..." << endl;
+    cout << "Press enter to exit ..." << endl;
     cin.ignore();
     cin.get();
     return 0;

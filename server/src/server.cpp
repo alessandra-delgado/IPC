@@ -8,6 +8,10 @@
 #include <thread>
 #include <csignal>
 #include <map>
+#include <atomic>
+#include <set>
+#include <mutex>
+#include <semaphore>
 
 #include "../include/server.hpp"
 #include "../include/game_session.hpp"
@@ -16,12 +20,21 @@
 
 using namespace std;
 
-bool stop_dispatcher = false;
+int id_msg; // todo: remove passing message id by arg
+std::set<int> active_sessions;
+std::mutex active_sessions_mutex;
+std::atomic<bool> shutdown = false;
+// todo add semaphore to signal between dispatcher and its created threads
+
 void signal_handler(int signum)
 {
     cout << "Interrupt signal received (" << signum << ")" << endl;
 
-    stop_dispatcher = true;
+    msg_t msg;
+    msg.msg_type = 1;
+    msg.sender_id = 1;
+
+    msgsnd(id_msg, &msg, sizeof(msg_t) - sizeof(long), 0);
 }
 
 void broadcast(int msgid, msg_t msg, long p1, long p2)
@@ -37,19 +50,25 @@ void broadcast(int msgid, msg_t msg, long p1, long p2)
 
 void dispatcher(int msgid)
 {
+    id_msg = msgid;
     msg_t message;
     signal(SIGINT, signal_handler);
     vector<int> waiting_players;
     int session_id = 2;
-    map<int, thread> game_sessions;
 
     // todo: send message for server shut down instead of using stop_dispatcher var, since msgrcv is blocking
-    while (!stop_dispatcher)
+    while (true)
     {
         cout << "A ESPERAR CONEXÃO" << endl;
 
         // Recebe PID do cliente
         msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), 1, 0);
+        if (message.sender_id == 1) // Shut down
+        {
+            shutdown = true;
+            // Wait for a thread to signal.
+            // While the set is not empty, wait again
+        }
 
         // Adicioanr novo cliente à lista de espera
         waiting_players.push_back(stoi(message.msg_text));
@@ -61,7 +80,7 @@ void dispatcher(int msgid)
         snprintf(message.msg_text, 6, "%s", "00000");
 
         // Para cada dois jogadores criar uma sessão
-        while (waiting_players.size() >= 2 && !stop_dispatcher)
+        while (waiting_players.size() >= 2)
         {
             cout << "A INICIAR JOGO" << endl;
 
@@ -75,6 +94,12 @@ void dispatcher(int msgid)
             cout << "A iniciar o jogo dos clientes: " << player1 << " : " << player2 << " GAME: " << session_id << endl;
             thread t(session_worker, msgid, player1, player2, session_id);
             t.detach();
+            // ! Critical section
+            active_sessions_mutex.lock();
+            active_sessions.insert(session_id);
+            active_sessions_mutex.unlock();
+            // * -- end of critical section
+
             cout << "thread created successfully" << endl;
             // Increment game count
             session_id++;
@@ -100,6 +125,20 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     long this_turn, to_wait; // will be the main alternating msg_type
     do
     {
+        if (shutdown == true)
+        {
+            sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_SHUTDOWN));
+            broadcast(msgid, message, p1, p2);
+            // ! Critical section
+            active_sessions_mutex.lock();
+            active_sessions.erase(sess_id);
+            active_sessions_mutex.unlock();
+
+            // * -- end of critical section
+            return;
+        }
+
+
         // * 0 - check for win on previous turn -- things are initialized so this should be fine
         if (game.check_for_win(game.turn == P1 ? game.p2.moves : game.p1.moves))
         {
@@ -174,6 +213,7 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         sprintf(message.msg_text, "%s\n%s\n", protocol_to_str(Protocol::MSG_BOARD), game.board_char);
         // Broadcast game board to players
         broadcast(msgid, message, p1, p2);
+        
 
     } while (true);
 }
