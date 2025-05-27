@@ -13,6 +13,7 @@ enum Protocol
     // * Game status
     MSG_BOARD,
     MSG_WIN,
+    MSG_LOSE,
     MSG_DRAW
 };
 
