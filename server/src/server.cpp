@@ -86,14 +86,16 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
 {
     // 1 - Init the game in this thread
     GameSession game;
-    game.p1.pid = p1; game.p1.mark = X;
-    game.p2.pid = p2; game.p2.mark = O;
+    game.p1.pid = p1;
+    game.p1.mark = X;
+    game.p2.pid = p2;
+    game.p2.mark = O;
 
     msg_t message;
     message.session_id = sess_id;
 
     sprintf(message.msg_text, "In session %d, players are %d and %d", sess_id, p1, p2);
-    
+
     // Game loop ----------------------------------------------------------------------------
     long this_turn, to_wait; // will be the main alternating msg_type
     do
@@ -101,8 +103,14 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         // * 0 - check for win on previous turn -- things are initialized so this should be fine
         if (game.check_for_win(game.turn == P1 ? game.p2.moves : game.p1.moves))
         {
+            message.msg_type = this_turn;
             sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_WIN));
-            broadcast(msgid, message, p1, p2);
+            msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+
+            message.msg_type = to_wait;
+            sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_LOSE));
+            msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+
             return;
         }
         else if (game.check_for_draw())

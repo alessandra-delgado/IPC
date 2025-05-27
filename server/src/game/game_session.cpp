@@ -4,7 +4,7 @@ bool GameSession::check_for_win(uint16_t player_moves)
 {
     for (int i = 0; i < 8; i++)
     {
-        if (this->bit_masks[i] & player_moves == bit_masks[i])
+        if ((this->bit_masks[i] & player_moves) == bit_masks[i])
             return true;
     }
     return false;
