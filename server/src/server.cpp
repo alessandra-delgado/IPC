@@ -72,19 +72,27 @@ void dispatcher(int msgid)
             while (true)
             {
                 // ? this is a read only operation on the set so it should be fine, even if we read the wrong value at first
-                if (active_sessions.empty()) return;
+                if (active_sessions.empty())
+                    return;
 
                 // Wait for the last thread to signal.
                 cout << "Waiting for open connections to close." << endl;
                 sem_wait(&sem);
                 cout << "Last connection closed." << endl;
-                // todo: check if there are unassigned players to sessions too, because those are just waiting infinitely until they're unable to read
+                cout << "Logging out waiting players" << endl;
+
+                for (int i = 0; i < (int) waiting_players.size(); i++)
+                {
+                    sprintf(message.msg_text, "%s", protocol_to_str(Protocol::MSG_SHUTDOWN));
+                    message.msg_type = waiting_players[i];
+                    msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+                }
+                waiting_players.clear();
             }
         }
 
         // Adicioanr novo cliente à lista de espera
         waiting_players.push_back(stoi(message.msg_text));
-
         // Connect log message
         cout << "Cliente " << message.msg_text << " conectado." << endl;
 
