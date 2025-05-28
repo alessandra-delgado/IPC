@@ -52,9 +52,8 @@ int main()
 
     cout << "You: " << message.msg_text << endl;
 
-    // todo: Game loop
     while (true)
-    { // im just testing if i can correnctly send messages between clients and session threads :)
+    {
 
         string msg_text(message.msg_text);
 
@@ -137,7 +136,7 @@ int main()
         if (msg_text.find(protocol_to_str(Protocol::MSG_SHUTDOWN)) != string::npos)
         {
             cout << "Server shutdown. Thanks for playing!" << endl;
-
+            return 0;
         }
         if (msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), client_pid, 0) == -1)
         {

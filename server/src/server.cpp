@@ -11,7 +11,7 @@
 #include <atomic>
 #include <set>
 #include <mutex>
-#include <semaphore>
+#include <semaphore.h>
 
 #include "../include/server.hpp"
 #include "../include/game_session.hpp"
@@ -24,6 +24,8 @@ int id_msg; // todo: remove passing message id by arg
 std::set<int> active_sessions;
 std::mutex active_sessions_mutex;
 std::atomic<bool> shutdown = false;
+sem_t sem;
+
 // todo add semaphore to signal between dispatcher and its created threads
 
 void signal_handler(int signum)
@@ -55,19 +57,29 @@ void dispatcher(int msgid)
     signal(SIGINT, signal_handler);
     vector<int> waiting_players;
     int session_id = 2;
+    sem_init(&sem, 0, 0);
 
-    // todo: send message for server shut down instead of using stop_dispatcher var, since msgrcv is blocking
     while (true)
     {
         cout << "A ESPERAR CONEXÃO" << endl;
-
-        // Recebe PID do cliente
+        // Recebe PID do cliente ou shutdown message
         msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), 1, 0);
         if (message.sender_id == 1) // Shut down
         {
+            cout << "Server was prompted to shutdown." << endl;
             shutdown = true;
-            // Wait for a thread to signal.
-            // While the set is not empty, wait again
+
+            while (true)
+            {
+                // ? this is a read only operation on the set so it should be fine, even if we read the wrong value at first
+                if (active_sessions.empty()) return;
+
+                // Wait for the last thread to signal.
+                cout << "Waiting for open connections to close." << endl;
+                sem_wait(&sem);
+                cout << "Last connection closed." << endl;
+                // todo: check if there are unassigned players to sessions too, because those are just waiting infinitely until they're unable to read
+            }
         }
 
         // Adicioanr novo cliente à lista de espera
@@ -125,19 +137,22 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     long this_turn, to_wait; // will be the main alternating msg_type
     do
     {
-        if (shutdown == true)
+        if (shutdown)
         {
             sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_SHUTDOWN));
             broadcast(msgid, message, p1, p2);
-            // ! Critical section
+            // ! Critical section --------------------------------------------------------------
             active_sessions_mutex.lock();
             active_sessions.erase(sess_id);
+            if (active_sessions.empty()) // This was the last session thread
+            {
+                sem_post(&sem);
+            }
             active_sessions_mutex.unlock();
-
             // * -- end of critical section
+
             return;
         }
-
 
         // * 0 - check for win on previous turn -- things are initialized so this should be fine
         if (game.check_for_win(game.turn == P1 ? game.p2.moves : game.p1.moves))
@@ -180,6 +195,7 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         do
         {
             // - Wait for player's move
+            cout << "thread is waiting for client msg" << endl;
             msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), sess_id, 0);
 
             // - Parse the text from the message
@@ -213,7 +229,6 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
         sprintf(message.msg_text, "%s\n%s\n", protocol_to_str(Protocol::MSG_BOARD), game.board_char);
         // Broadcast game board to players
         broadcast(msgid, message, p1, p2);
-        
 
     } while (true);
 }
