@@ -27,7 +27,7 @@ int main()
     
     // to destroy the message queue
     msgctl(msgid, IPC_RMID, NULL);
-    cout << "destroyed the message queue. shutting server down." << endl;
+    cout << "\033[93mMessage queue destroyed\033[m" << endl;
     
     return 0;
 }

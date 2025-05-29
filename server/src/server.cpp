@@ -16,7 +16,7 @@
 #include "../include/server.hpp"
 #include "../include/game_session.hpp"
 #include "../../shared/include/msg_t.hpp"
-#include "../include/protocol.hpp"
+#include "../../shared/include/protocol.hpp"
 
 using namespace std;
 
@@ -25,8 +25,6 @@ std::set<int> active_sessions;
 std::mutex active_sessions_mutex;
 std::atomic<bool> shutdown = false;
 sem_t sem;
-
-// todo add semaphore to signal between dispatcher and its created threads
 
 void signal_handler(int signum)
 {
@@ -67,27 +65,32 @@ void dispatcher(int msgid)
         if (message.sender_id == 1) // Shut down
         {
             cout << "Server was prompted to shutdown." << endl;
-            shutdown = true;
-
             while (true)
             {
-                // ? this is a read only operation on the set so it should be fine, even if we read the wrong value at first
-                if (active_sessions.empty())
-                    return;
-
-                // Wait for the last thread to signal.
-                cout << "Waiting for open connections to close." << endl;
-                sem_wait(&sem);
-                cout << "Last connection closed." << endl;
                 cout << "Logging out waiting players" << endl;
-
-                for (int i = 0; i < (int) waiting_players.size(); i++)
+                for (int i = 0; i < (int)waiting_players.size(); i++)
                 {
                     sprintf(message.msg_text, "%s", protocol_to_str(Protocol::MSG_SHUTDOWN));
                     message.msg_type = waiting_players[i];
                     msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
                 }
                 waiting_players.clear();
+
+                if (active_sessions.empty())
+                    return;
+
+                // Wait for the last thread to signal.
+                cout << "Waiting for open connections to close." << endl;
+                cout << "\033[91mIf sessions don't take action in 5 seconds, server will force shutdown.\033[0m" << endl;
+                struct timespec ts;
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += 5; // timeout in seconds
+                shutdown = true;
+                if (sem_timedwait(&sem, &ts) == -1 && errno == ETIMEDOUT)
+                {
+                    std::cerr << "Timer ran out. Server forced to shutdown" << endl;
+                    return;
+                }
             }
         }
 
@@ -114,6 +117,7 @@ void dispatcher(int msgid)
             cout << "A iniciar o jogo dos clientes: " << player1 << " : " << player2 << " GAME: " << session_id << endl;
             thread t(session_worker, msgid, player1, player2, session_id);
             t.detach();
+
             // ! Critical section
             active_sessions_mutex.lock();
             active_sessions.insert(session_id);
@@ -139,8 +143,6 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
     msg_t message;
     message.session_id = sess_id;
 
-    sprintf(message.msg_text, "In session %d, players are %d and %d", sess_id, p1, p2);
-
     // Game loop ----------------------------------------------------------------------------
     long this_turn, to_wait; // will be the main alternating msg_type
     do
@@ -159,6 +161,7 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
             active_sessions_mutex.unlock();
             // * -- end of critical section
 
+            cout << "Session " << sess_id << " closed." << endl;
             return;
         }
 
@@ -173,13 +176,13 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
             sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_LOSE));
             msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
 
-            return;
+            break;
         }
         else if (game.check_for_draw())
         {
             sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_DRAW));
             broadcast(msgid, message, p1, p2);
-            return;
+            break;
         }
 
         // * 1 - Check whose turn it is
@@ -235,8 +238,13 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
 
         // * 5 - Send message to both clients with the game status at the end of turn
         sprintf(message.msg_text, "%s\n%s\n", protocol_to_str(Protocol::MSG_BOARD), game.board_char);
+
         // Broadcast game board to players
         broadcast(msgid, message, p1, p2);
-
     } while (true);
+
+    // ! Critical
+    active_sessions_mutex.lock();
+    active_sessions.erase(sess_id);
+    active_sessions_mutex.unlock();
 }
