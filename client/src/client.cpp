@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include "../../shared/include/msg_t.hpp"
-#include "../../server/include/protocol.hpp"
+#include "../../shared/include/protocol.hpp"
 
 using namespace std;
 
@@ -21,10 +21,11 @@ int main()
     key_t key = ftok("tictactoe_connect", 1);
 
     // msgget creates a message queue and returns identifier
-    int msgid = msgget(key, 0666 | IPC_CREAT);
+
+    int msgid = msgget(key, 0666); // client should not create the message queue if the server is not running
     if (msgid == -1)
     {
-        perror("msgget");
+        cerr << "Server is down (message queue not available)" << endl;
         return 1;
     }
 
@@ -52,9 +53,8 @@ int main()
 
     cout << "You: " << message.msg_text << endl;
 
-    // todo: Game loop
     while (true)
-    { // im just testing if i can correnctly send messages between clients and session threads :)
+    {
 
         string msg_text(message.msg_text);
 
@@ -77,7 +77,7 @@ int main()
 
             if (msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0) == -1)
             {
-                perror("msgsnd failed");
+                cerr << "Could not send request to the server." << endl;
                 break;
             }
         }
@@ -116,32 +116,35 @@ int main()
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_WIN)) != string::npos)
         {
-            cout << "\nGame over! " << "You win!" << endl;
+            cout << "Game over!" << "You win!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_LOSE)) != string::npos)
         {
-            cout << "\nGame over! " << "You lose." << endl;
+            cout << "Game over!" << "You lose." << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_DRAW)) != string::npos)
         {
-            cout << "\nGame over! It's a draw!" << endl;
+            cout << "Game over! It's a draw!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_INVALID)) != string::npos)
         {
-            cout << "\nInvalid move! Please try again!" << endl;
+            cout << "Invalid move! Please try again!" << endl;
         }
 
-        if (msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), client_pid, 0) == -1)
+        if (msg_text.find(protocol_to_str(Protocol::MSG_SHUTDOWN)) != string::npos)
         {
-            perror("msgrcv failed --- loop");
+            cout << "Server shutdown." << endl;
+            return 0;
+        }
+        if (msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), (long) client_pid, 0) == -1)
+        {
+            cerr << "Connection to server closed." << endl;
             return 1;
         }
     }
-    cout << "Game ended. Press enter to exit ..." << endl;
-    cin.ignore();
-    cin.get();
+
     return 0;
 }
