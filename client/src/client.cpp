@@ -51,7 +51,6 @@ int main()
 
     int session_id = message.session_id;
 
-    cout << "You: " << message.msg_text << endl;
 
     while (true)
     {
@@ -112,21 +111,21 @@ int main()
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_WAIT)) != string::npos)
         {
-            cout << "Waiting for the other player..." << endl;
+            cout << "Waiting for the other player's move ..." << endl;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_WIN)) != string::npos)
         {
-            cout << "Game over!" << "You win!" << endl;
+            cout << "Game over!\n" << "You win!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_LOSE)) != string::npos)
         {
-            cout << "Game over!" << "You lose." << endl;
+            cout << "Game over!\n" << "You lose." << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_DRAW)) != string::npos)
         {
-            cout << "Game over! It's a draw!" << endl;
+            cout << "Game over!\n It's a draw!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_INVALID)) != string::npos)
