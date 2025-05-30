@@ -20,7 +20,7 @@
 
 using namespace std;
 
-int id_msg; // todo: remove passing message id by arg
+int id_msg;
 std::set<int> active_sessions;
 std::mutex active_sessions_mutex;
 std::atomic<bool> shutdown = false;

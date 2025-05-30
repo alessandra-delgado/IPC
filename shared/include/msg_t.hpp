@@ -8,4 +8,3 @@ typedef struct
     int sender_id;       // Who sent this
     char msg_text[1000]; // Might have to change message buffer later?
 } msg_t;
-// todo: ^^^
