@@ -125,7 +125,7 @@ int main()
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_DRAW)) != string::npos)
         {
-            cout << "Game over!\n It's a draw!" << endl;
+            cout << "Game over!\nIt's a draw!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_INVALID)) != string::npos)

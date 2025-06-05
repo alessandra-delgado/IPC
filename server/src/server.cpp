@@ -226,10 +226,21 @@ void session_worker(int msgid, int p1, int p2, int sess_id)
                 position = stoi(message.msg_text);
                 invalid_move = game.validate_move(position);
             }
-            catch (exception)
+            catch (const std::exception &e)
             {
-                msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0); // retry
-            };
+               invalid_move = true;
+            }
+
+            if (invalid_move)
+            {
+                sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_INVALID));
+                message.msg_type = this_turn;
+                msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+
+                sprintf(message.msg_text, "%s\n", protocol_to_str(Protocol::MSG_MOVE));
+                message.msg_type = this_turn;
+                msgsnd(msgid, &message, sizeof(msg_t) - sizeof(long), 0);
+            }
 
         } while (invalid_move);
 
