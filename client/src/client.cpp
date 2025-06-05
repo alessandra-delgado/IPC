@@ -51,6 +51,20 @@ int main()
 
     int session_id = message.session_id;
 
+    cout << " == Initial board and positions == " << endl;
+    for (int i = 0; i < 3; i++)
+    {
+        cout << " ";
+        for (int j = 0; j < 3; j++)
+        {
+            cout << "\033[90m" << i * 3 + j + 1 << "\033[0m";
+            if (j < 2)
+                cout << " | ";
+        }
+        cout << "\n";
+        if (i < 2)
+            cout << "---+---+---\n";
+    }
 
     while (true)
     {
@@ -98,7 +112,10 @@ int main()
                     {
                         int pos = j * 3 + i;
                         char c = display[pos];
-                        cout << c;
+                        if (c != ' ')
+                            cout << c;
+                        else
+                            cout << "\033[90m" << j * 3 + i + 1 << "\033[0m";
                         if (i < 2)
                             cout << " | ";
                     }
@@ -115,12 +132,14 @@ int main()
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_WIN)) != string::npos)
         {
-            cout << "Game over!\n" << "You win!" << endl;
+            cout << "Game over!\n"
+                 << "You win!" << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_LOSE)) != string::npos)
         {
-            cout << "Game over!\n" << "You lose." << endl;
+            cout << "Game over!\n"
+                 << "You lose." << endl;
             break;
         }
         else if (msg_text.find(protocol_to_str(Protocol::MSG_DRAW)) != string::npos)
@@ -138,7 +157,7 @@ int main()
             cout << "Server shutdown." << endl;
             return 0;
         }
-        if (msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), (long) client_pid, 0) == -1)
+        if (msgrcv(msgid, &message, sizeof(msg_t) - sizeof(long), (long)client_pid, 0) == -1)
         {
             cerr << "Connection to server closed." << endl;
             return 1;

@@ -57,6 +57,9 @@ void dispatcher(int msgid)
     int session_id = 2;
     sem_init(&sem, 0, 0);
 
+    cout << "IPC - SO 2024/2025 == Servidor de \033[92mTIC TAC TOE\033[0m" << endl;
+    cout << "\033[96mAlessandra\033[0m - 51713 e \033[93mMatilde\033[0m - 51752" << endl;
+
     while (true)
     {
         cout << "A ESPERAR CONEXÃO" << endl;
